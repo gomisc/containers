@@ -1,6 +1,7 @@
 package containers
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,10 @@ type (
 
 	PortBinds []PortBind
 )
+
+func NewPort(port uint16, proto string) Port {
+	return Port(fmt.Sprintf("%d/%s", port, proto))
+}
 
 func (p Port) Port() string {
 	_, value := splitProtoPort(string(p))
