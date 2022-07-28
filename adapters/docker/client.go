@@ -25,7 +25,7 @@ import (
 type dockerClient struct {
 	client        client.APIClient
 	info          types.Info
-	netalloc      *containers.NetworksAllocator
+	netalloc      *ipnet.NetworksAllocator
 	stdout        io.Writer
 	stderr        io.Writer
 	isInContainer bool
@@ -49,7 +49,10 @@ func New() (containers.Client, error) {
 		return nil, errors.Wrap(err, "get docker info")
 	}
 
-	dockerCli.netalloc, err = containers.NewNetworkAllocator(dockerCli)
+	dockerCli.netalloc, err = ipnet.NewNetworkAllocator(
+		dockerCli.getUsedNetworks,
+		getReservedNetworks()...,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "create networks allocator")
 	}
@@ -334,6 +337,35 @@ func (cli *dockerClient) createNetwork(name string, subnet *ipnet.SubnetRange) (
 	}
 
 	return &dockerNetwork{NetworkResource: &resource, client: cli.client, subnet: subnet}, nil
+}
+
+func (cli *dockerClient) getUsedNetworks(ctx context.Context) (ipnet.NetworksSet, error) {
+	set := make(ipnet.NetworksSet)
+
+	list, err := cli.client.NetworkList(ctx, types.NetworkListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "get docker networks list")
+	}
+
+	for li := 0; li < len(list); li++ {
+		config := list[li].IPAM.Config
+		if len(config) == 0 {
+			continue
+		}
+
+		var nw *net.IPNet
+
+		_, nw, err = net.ParseCIDR(config[0].Subnet)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse docker network cidr")
+		}
+
+		sz, _ := nw.Mask.Size()
+
+		set[nw.String()] = sz
+	}
+
+	return set, nil
 }
 
 func createSubnetRange(cidr string) (*ipnet.SubnetRange, error) {

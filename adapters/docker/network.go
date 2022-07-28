@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
 
@@ -19,7 +20,8 @@ const (
 	// ErrDockerNetworkNotExist - ошибка "докер сеть отсутствует"
 	ErrDockerNetworkNotExist = errors.Const("docker network dose not exist")
 
-	maxTypeID uint8 = 40
+	reservedNetworksVar       = "DOCKER_RESERVED_NETWORKS"
+	maxTypeID           uint8 = 40
 )
 
 type dockerNetwork struct {
@@ -99,4 +101,12 @@ func (nw *dockerNetwork) isFreeIP(ip string) bool {
 	}
 
 	return true
+}
+
+func getReservedNetworks() []string {
+	if reservedStr := os.Getenv(reservedNetworksVar); reservedStr != "" {
+		return strings.Split(reservedStr, ",")
+	}
+
+	return nil
 }
