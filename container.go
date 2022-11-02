@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"git.corout.in/golibs/confctl"
-	"git.corout.in/golibs/errors"
-	"git.corout.in/golibs/errors/errgroup"
-	"git.corout.in/golibs/network/ports"
+	"git.eth4.dev/golibs/confctl"
+	"git.eth4.dev/golibs/errors"
+	"git.eth4.dev/golibs/errors/errgroup"
+	"git.eth4.dev/golibs/network/ports"
 )
 
 // Общие настройки контейнера
@@ -125,6 +125,11 @@ func (c *BaseContainer) HostPort(name ports.PortName) string {
 	}
 
 	return ""
+}
+
+// GetClient - возвращает клиента среды исполнения контейнера
+func (c *BaseContainer) GetClient() Client {
+	return c.client
 }
 
 func (c *BaseContainer) ContainerPorts() []Port {
@@ -368,7 +373,7 @@ func (c *BaseContainer) Stop() error {
 }
 
 // LogStdout пишет сообщение во writer потока стандартного вывода контейнера
-func (c *BaseContainer) LogStdout(format string, args ...interface{}) bool {
+func (c *BaseContainer) LogStdout(format string, args ...any) bool {
 	if c.OutputStream == nil {
 		return false
 	}
@@ -381,7 +386,7 @@ func (c *BaseContainer) LogStdout(format string, args ...interface{}) bool {
 }
 
 // LogStderr пишет сообщение во writer потока стандартного вывода ошибок контейнера
-func (c *BaseContainer) LogStderr(format string, args ...interface{}) bool {
+func (c *BaseContainer) LogStderr(format string, args ...any) bool {
 	if c.ErrorStream == nil {
 		return false
 	}
@@ -394,7 +399,7 @@ func (c *BaseContainer) LogStderr(format string, args ...interface{}) bool {
 }
 
 // LogError пишет ошибку сообщение во writer потока стандартного вывода ошибок контейнера
-func (c *BaseContainer) LogError(err error, args ...interface{}) bool {
+func (c *BaseContainer) LogError(err error, args ...any) bool {
 	return c.LogStderr("\x1b[91mERROR:\x1b[0m " + errors.Formatted(err, args...).Error())
 }
 

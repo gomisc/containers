@@ -2,24 +2,27 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"os"
 	"strings"
 	"time"
 
-	"git.corout.in/golibs/errors"
-	"git.corout.in/golibs/network/ipnet"
+	"git.eth4.dev/golibs/errors"
+	"git.eth4.dev/golibs/network/ipnet"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	"git.corout.in/golibs/containers"
+	"git.eth4.dev/golibs/containers"
 )
 
 type dockerClient struct {
@@ -246,7 +249,104 @@ func (cli *dockerClient) StreamLogs(ctx context.Context, id string, stderr, stdo
 	}
 }
 
-func (cli *dockerClient) CheckDockerNetwork(nw, cidr string) (dn containers.Network, err error) {
+func (cli *dockerClient) FindImageLocal(ctx context.Context, image string) (bool, error) {
+	result, err := cli.client.ImageList(ctx, types.ImageListOptions{
+		Filters: filters.NewArgs(filters.Arg("reference", image)),
+	})
+	if err != nil {
+		return false, errors.Wrap(err, "get local images list")
+	}
+
+	return len(result) != 0, nil
+}
+
+func (cli *dockerClient) PullImage(image string) error {
+	pull, err := cli.client.ImagePull(context.Background(), image, types.ImagePullOptions{})
+	if err != nil {
+		return errors.Wrap(err, "pull docker image")
+	}
+
+	if err = jsonmessage.DisplayJSONMessagesStream(pull, cli.stdout, 0, false, nil); err != nil {
+		return errors.Wrap(err, "pull image output")
+	}
+
+	return nil
+}
+
+func (cli *dockerClient) RemoveImage(image string) {
+	result, err := cli.client.ImageList(context.Background(), types.ImageListOptions{
+		Filters: filters.NewArgs(filters.Arg("reference", image)),
+	})
+	if err != nil {
+		cli.logStderr(errors.Ctx().Str("image", image).
+			Wrap(err, "find image in local registry"),
+		)
+	}
+
+	if len(result) == 0 {
+		return
+	}
+
+	var (
+		report       []types.ImageDeleteResponseItem
+		cleanMessage = "Clean " + image + ":\n"
+	)
+
+	report, err = cli.client.ImageRemove(context.Background(), result[0].ID, types.ImageRemoveOptions{
+		Force:         true,
+		PruneChildren: true,
+	})
+	if err != nil {
+		cli.logStderr(errors.Ctx().Str("image", image).Wrap(err, "remove image"))
+	}
+
+	for i := 0; i < len(report); i++ {
+		if report[i].Untagged != "" {
+			cleanMessage += "  " + report[i].Untagged + " - untagged\n"
+		}
+
+		if report[i].Deleted != "" {
+			cleanMessage += "  " + report[i].Deleted + " - deleted\n"
+		}
+	}
+
+	cli.logStdout(cleanMessage)
+}
+
+func (cli *dockerClient) BuildImage(data *containers.ImageBuildData) error {
+	if data.ClearRoot {
+		defer func() {
+			if err := os.RemoveAll(data.Root); err != nil {
+				cli.logStderr(err, "clear build root")
+			}
+		}()
+	}
+
+	buildCtx, err := archive.TarWithOptions(data.Root, &archive.TarOptions{})
+	if err != nil {
+		return errors.Ctx().Strings("tags", data.Tags).Wrap(err, "create image build context")
+	}
+
+	resp, err := cli.client.ImageBuild(context.Background(), buildCtx, types.ImageBuildOptions{
+		Context:    buildCtx,
+		Dockerfile: data.Dockerfile,
+		NoCache:    data.Nocache,
+		BuildArgs:  data.Args,
+		Tags:       data.Tags,
+		Remove:     true,
+	})
+	if err != nil {
+		return errors.Ctx().Strings("tags", data.Tags).Wrap(err, "build image")
+	}
+
+	if err = jsonmessage.DisplayJSONMessagesStream(resp.Body, cli.stdout, 0, false, nil); err != nil {
+		return errors.Ctx().Strings("tags", data.Tags).Wrap(err, "output build log")
+	}
+
+	return nil
+}
+
+func (cli *dockerClient) CheckNetwork(nw, cidr string) (dn containers.Network, err error) {
 	dn, err = cli.checkNetworkExist(nw)
 	if err != nil {
 		if errors.Is(err, ErrDockerNetworkNotExist) {
@@ -366,6 +466,14 @@ func (cli *dockerClient) getUsedNetworks(ctx context.Context) (ipnet.NetworksSet
 	}
 
 	return set, nil
+}
+
+func (cli *dockerClient) logStdout(msg string, args ...any) {
+	_, _ = fmt.Fprintf(cli.stdout, msg+"\n", args...)
+}
+
+func (cli *dockerClient) logStderr(err error, args ...any) {
+	_, _ = fmt.Fprintln(cli.stderr, errors.Formatted(err, args...))
 }
 
 func createSubnetRange(cidr string) (*ipnet.SubnetRange, error) {

@@ -11,6 +11,8 @@ import (
 // Container - интерфейс работы с docker-контейнером
 type (
 	Container interface {
+		// GetClient - возвращает клиента среды исполнения контейнера
+		GetClient() Client
 		// GetID возвращает идентификатор запущенного контейнера после его создания
 		GetID() string
 		// GetName возвращает имя контейнера
@@ -50,11 +52,11 @@ type (
 		// ContainerAddrs - возвращает мапу адресов контейнера
 		ContainerAddrs() AddrsMap
 		// LogStdout пишет сообщение во writer потока стандартного вывода контейнера
-		LogStdout(format string, args ...interface{}) bool
+		LogStdout(format string, args ...any) bool
 		// LogStderr пишет сообщение во writer потока стандартного вывода ошибок контейнера
-		LogStderr(format string, args ...interface{}) bool
+		LogStderr(format string, args ...any) bool
 		// LogError пишет ошибку сообщение во writer потока стандартного вывода ошибок контейнера
-		LogError(err error, args ...interface{}) bool
+		LogError(err error, args ...any) bool
 	}
 
 	Client interface {
@@ -81,9 +83,17 @@ type (
 		ContainerStop(ctx context.Context, id string, timeout time.Duration) error
 		// StreamLogs подключает вывод логов контейнера
 		StreamLogs(ctx context.Context, id string, stderr, stdout io.Writer, follow bool) error
-		// CheckDockerNetwork проверяет существование докер сети и создает
+		// FindImageLocal - осуществляет поиск образа в локальном сторе
+		FindImageLocal(ctx context.Context, image string) (bool, error)
+		// PullImage - скачивает образ в локальный стор
+		PullImage(image string) error
+		// RemoveImage - удаляет образ из локального стора
+		RemoveImage(image string)
+		// BuildImage - собирает образ
+		BuildImage(data *ImageBuildData) error
+		// CheckNetwork проверяет существование сети и создает
 		// ее в случае отсутствия
-		CheckDockerNetwork(nw, cidr string) (Network, error)
+		CheckNetwork(nw, cidr string) (Network, error)
 	}
 
 	Network interface {

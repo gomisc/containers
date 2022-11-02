@@ -6,12 +6,12 @@ import (
 	"strings"
 	"sync"
 
-	"git.corout.in/golibs/errors"
-	"git.corout.in/golibs/network/ipnet"
+	"git.eth4.dev/golibs/errors"
+	"git.eth4.dev/golibs/network/ipnet"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 
-	"git.corout.in/golibs/containers"
+	"git.eth4.dev/golibs/containers"
 )
 
 const (
