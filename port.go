@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git.eth4.dev/golibs/network/ports"
+	"gopkg.in/gomisc/network.v1/ports"
 )
 
 type (

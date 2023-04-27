@@ -1,24 +1,19 @@
-module git.eth4.dev/golibs/containers
+module gopkg.in/gomisc/containers.v1
 
-go 1.18
+go 1.20
 
 require (
-	git.eth4.dev/golibs/confctl v1.1.0
-	git.eth4.dev/golibs/errors v1.2.2
-	git.eth4.dev/golibs/network v1.1.5
+	gopkg.in/gomisc/envs.v1 v1.2.1
+	gopkg.in/gomisc/errors.v1 v1.3.2
+	gopkg.in/gomisc/network.v1 v1.2.1
 )
 
 require (
-	git.eth4.dev/golibs/fields v1.1.0 // indirect
-	git.eth4.dev/golibs/slog v1.1.1 // indirect
-	git.eth4.dev/golibs/tags v1.1.0 // indirect
-	git.eth4.dev/golibs/types v1.1.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Microsoft/hcsshim v0.9.4 // indirect
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/containerd/containerd v1.6.8 // indirect
 	github.com/containerd/continuity v0.3.0 // indirect
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
@@ -29,8 +24,6 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/moby/sys/mount v0.3.3 // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
-	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/opencontainers/runc v1.1.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
@@ -43,7 +36,9 @@ require (
 	golang.org/x/net v0.0.0-20220809184613-07c6da5e1ced // indirect
 	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/gomisc/fields.v1 v1.1.2 // indirect
+	gopkg.in/gomisc/slog.v1 v1.2.1 // indirect
+	gopkg.in/gomisc/tags.v1 v1.2.1 // indirect
 )
 
 require (

@@ -6,12 +6,12 @@ import (
 	"strings"
 	"sync"
 
-	"git.eth4.dev/golibs/errors"
-	"git.eth4.dev/golibs/network/ipnet"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 
-	"git.eth4.dev/golibs/containers"
+	"gopkg.in/gomisc/containers.v1"
+	"gopkg.in/gomisc/errors.v1"
+	"gopkg.in/gomisc/network.v1/ipnet"
 )
 
 const (

@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"git.eth4.dev/golibs/errors"
-	"git.eth4.dev/golibs/network/ipnet"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -22,7 +20,9 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
 
-	"git.eth4.dev/golibs/containers"
+	"gopkg.in/gomisc/containers.v1"
+	"gopkg.in/gomisc/errors.v1"
+	"gopkg.in/gomisc/network.v1/ipnet"
 )
 
 type dockerClient struct {
@@ -169,7 +169,8 @@ func (cli *dockerClient) ContainerStart(ctx context.Context, id, name string) (*
 
 		for port, binds := range cont.HostConfig.PortBindings {
 			for pbi := 0; pbi < len(binds); pbi++ {
-				info.PortBinds[containers.Port(port)] = append(info.PortBinds[containers.Port(port)],
+				info.PortBinds[containers.Port(port)] = append(
+					info.PortBinds[containers.Port(port)],
 					containers.PortBinding(binds[pbi]),
 				)
 			}
@@ -187,7 +188,10 @@ func (cli *dockerClient) ContainerStart(ctx context.Context, id, name string) (*
 	return nil, nil
 }
 
-func (cli *dockerClient) ContainerWait(ctx context.Context, id string) (<-chan containers.ContainerStatus, <-chan error) {
+func (cli *dockerClient) ContainerWait(ctx context.Context, id string) (
+	<-chan containers.ContainerStatus,
+	<-chan error,
+) {
 	waitCh, errCh := cli.client.ContainerWait(ctx, id, container.WaitConditionNotRunning)
 	statusCh := make(chan containers.ContainerStatus)
 
@@ -250,9 +254,11 @@ func (cli *dockerClient) StreamLogs(ctx context.Context, id string, stderr, stdo
 }
 
 func (cli *dockerClient) FindImageLocal(ctx context.Context, image string) (bool, error) {
-	result, err := cli.client.ImageList(ctx, types.ImageListOptions{
-		Filters: filters.NewArgs(filters.Arg("reference", image)),
-	})
+	result, err := cli.client.ImageList(
+		ctx, types.ImageListOptions{
+			Filters: filters.NewArgs(filters.Arg("reference", image)),
+		},
+	)
 	if err != nil {
 		return false, errors.Wrap(err, "get local images list")
 	}
@@ -274,12 +280,15 @@ func (cli *dockerClient) PullImage(image string) error {
 }
 
 func (cli *dockerClient) RemoveImage(image string) {
-	result, err := cli.client.ImageList(context.Background(), types.ImageListOptions{
-		Filters: filters.NewArgs(filters.Arg("reference", image)),
-	})
+	result, err := cli.client.ImageList(
+		context.Background(), types.ImageListOptions{
+			Filters: filters.NewArgs(filters.Arg("reference", image)),
+		},
+	)
 	if err != nil {
-		cli.logStderr(errors.Ctx().Str("image", image).
-			Wrap(err, "find image in local registry"),
+		cli.logStderr(
+			errors.Ctx().Str("image", image).
+				Wrap(err, "find image in local registry"),
 		)
 	}
 
@@ -292,10 +301,12 @@ func (cli *dockerClient) RemoveImage(image string) {
 		cleanMessage = "Clean " + image + ":\n"
 	)
 
-	report, err = cli.client.ImageRemove(context.Background(), result[0].ID, types.ImageRemoveOptions{
-		Force:         true,
-		PruneChildren: true,
-	})
+	report, err = cli.client.ImageRemove(
+		context.Background(), result[0].ID, types.ImageRemoveOptions{
+			Force:         true,
+			PruneChildren: true,
+		},
+	)
 	if err != nil {
 		cli.logStderr(errors.Ctx().Str("image", image).Wrap(err, "remove image"))
 	}
@@ -327,14 +338,16 @@ func (cli *dockerClient) BuildImage(data *containers.ImageBuildData) error {
 		return errors.Ctx().Strings("tags", data.Tags).Wrap(err, "create image build context")
 	}
 
-	resp, err := cli.client.ImageBuild(context.Background(), buildCtx, types.ImageBuildOptions{
-		Context:    buildCtx,
-		Dockerfile: data.Dockerfile,
-		NoCache:    data.Nocache,
-		BuildArgs:  data.Args,
-		Tags:       data.Tags,
-		Remove:     true,
-	})
+	resp, err := cli.client.ImageBuild(
+		context.Background(), buildCtx, types.ImageBuildOptions{
+			Context:    buildCtx,
+			Dockerfile: data.Dockerfile,
+			NoCache:    data.Nocache,
+			BuildArgs:  data.Args,
+			Tags:       data.Tags,
+			Remove:     true,
+		},
+	)
 	if err != nil {
 		return errors.Ctx().Strings("tags", data.Tags).Wrap(err, "build image")
 	}
@@ -567,12 +580,14 @@ func sliceToDockerMounts(slice []string) []mount.Mount {
 		mnt := strings.Split(m, ":")
 		if len(mnt) == 2 {
 			src, dst := mnt[0], mnt[1]
-			mounts = append(mounts, mount.Mount{
-				Source:   src,
-				Target:   dst,
-				Type:     mount.TypeBind,
-				ReadOnly: false,
-			})
+			mounts = append(
+				mounts, mount.Mount{
+					Source:   src,
+					Target:   dst,
+					Type:     mount.TypeBind,
+					ReadOnly: false,
+				},
+			)
 		}
 	}
 

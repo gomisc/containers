@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"git.eth4.dev/golibs/confctl"
-	"git.eth4.dev/golibs/errors"
-	"git.eth4.dev/golibs/errors/errgroup"
-	"git.eth4.dev/golibs/network/ports"
+	envs "gopkg.in/gomisc/envs.v1"
+	"gopkg.in/gomisc/errors.v1"
+	"gopkg.in/gomisc/errors.v1/errgroup"
+	"gopkg.in/gomisc/network.v1/ports"
 )
 
 // Общие настройки контейнера
@@ -74,14 +74,14 @@ type BaseContainer struct {
 	containerAddress AddrsMap
 	hostAddress      AddrsMap
 
-	ConfController controllers.Controller
+	ConfController envs.Controller
 
 	mutex   sync.Mutex
 	stopped bool
 }
 
 // NewBaseContainer - конструктор базового контейнера
-func NewBaseContainer(cli Client, nw Network, confCtl controllers.Controller) *BaseContainer {
+func NewBaseContainer(cli Client, nw Network, confCtl envs.Controller) *BaseContainer {
 	cont := &BaseContainer{
 		client:         cli,
 		ConfController: confCtl,
@@ -288,15 +288,17 @@ func (c *BaseContainer) StartContainer(sigCh <-chan os.Signal, ready chan<- stru
 	defer cancelLogs()
 
 	leg := errgroup.New()
-	leg.Go(func() error {
-		return c.client.StreamLogs(
-			logContext,
-			c.containerID,
-			c.ErrorStream,
-			c.OutputStream,
-			true,
-		)
-	})
+	leg.Go(
+		func() error {
+			return c.client.StreamLogs(
+				logContext,
+				c.containerID,
+				c.ErrorStream,
+				c.OutputStream,
+				true,
+			)
+		},
+	)
 
 	go func() {
 		if errList := errors.AsChain(leg.Wait()); len(errList) != 0 {
@@ -306,12 +308,14 @@ func (c *BaseContainer) StartContainer(sigCh <-chan os.Signal, ready chan<- stru
 		}
 	}()
 
-	c.network.AddContainer(&OrchestratorInfo{
-		ID:                info.ID,
-		TypeID:            c.TypeID,
-		ContainerEnpoints: c.containerAddress,
-		HostEnpoints:      c.hostAddress,
-	})
+	c.network.AddContainer(
+		&OrchestratorInfo{
+			ID:                info.ID,
+			TypeID:            c.TypeID,
+			ContainerEnpoints: c.containerAddress,
+			HostEnpoints:      c.hostAddress,
+		},
+	)
 
 	containerExit := c.wait()
 	ctx, cancel := context.WithTimeout(context.Background(), c.StartTimeout)

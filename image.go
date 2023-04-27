@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"git.eth4.dev/golibs/errors"
+	"gopkg.in/gomisc/errors.v1"
 )
 
 // Images пакет имен образов и опций их подготовки (скачивание, сборка, etc)
